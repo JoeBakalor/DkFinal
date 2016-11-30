@@ -30,6 +30,7 @@ class ScoreBoardViewController: UIViewController {
     
     @IBOutlet weak var LiveSYNCLabel: UILabel!
     
+    @IBOutlet weak var debugLabel: UILabel!
     /*==========================================================================================*/
     //
     //  Variables
@@ -48,6 +49,7 @@ class ScoreBoardViewController: UIViewController {
     /*==========================================================================================*/
     override func viewDidLoad()
     {
+        debugLabel.layer.isHidden = true
         if UIDeviceOrientationIsLandscape(UIDevice.current.orientation)
         {
             LiveSYNCLabel.layer.isHidden = true
@@ -76,6 +78,17 @@ class ScoreBoardViewController: UIViewController {
         
         //!!!!!!******COMMENTED OUT BECUASE OF WARNING, IF BREAKS CHANGE BACK NOVEMBER 23
         //MultidropPacketBuilderSharedInstance//init the class instance so we can start using it
+    }
+    @IBAction func debugSwitched(_ sender: UISwitch)
+    {
+        if sender.isOn
+        {
+            debugLabel.layer.isHidden = false
+        }
+        else
+        {
+            debugLabel.layer.isHidden = true
+        }
     }
     /*==========================================================================================*/
     //
@@ -241,14 +254,21 @@ class ScoreBoardViewController: UIViewController {
     func sendUpdates()
     {
         //  Can't send updates until setup is finished 
-        if !setupComplete{return}
-        
+        if !debug
+        {
+            if !setupComplete{return}
+        }
         // Create protocol packet to send
         protocolStringToSend = MultidropPacketBuilderSharedInstance.convertValuesToProtocalString(ballCount.text!, strikes: strikeCount.text!, outs: outCount.text!, guestScore: guestScore.text!, inningCount: inningCount.text!, homeScore: homeScore.text!)
         print("Retuned Protocol String: \(protocolStringToSend)")
         
+        debugLabel.text? = "\(protocolStringToSend!)"
+        
         // Send updates to scoreboard by writing protocol data to scoreboard characteristic
+        if !debug
+        {
         BLEConnectionManagerSharedInstance.bleService?.writeValueToCharacteristic(protocolStringToSend! as Data, characteristic: scoreboardCharacteristic!)
+        }
     }
     /*==========================================================================================*/
 

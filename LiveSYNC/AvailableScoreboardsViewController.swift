@@ -8,7 +8,7 @@
 
 import UIKit
 import CoreBluetooth
-public let debug = false
+public var debug = false
 
 
 class AvailableScoreboardsViewController: UIViewController
@@ -22,6 +22,7 @@ class AvailableScoreboardsViewController: UIViewController
     @IBOutlet weak var connectingView: UIView!  //  Connection status window overlay
     @IBOutlet weak var connectionStatus: UIActivityIndicatorView!  // Spinning indicator
     @IBOutlet weak var connectingViewLabel: UILabel!
+    @IBOutlet weak var simulatedSwitch: UISwitch!
     /*==========================================================================================*/
     //
     // Constants
@@ -64,6 +65,23 @@ class AvailableScoreboardsViewController: UIViewController
         connectionStatus.stopAnimating()
         connectionStatus.isHidden = true
     }
+    
+    @IBAction func simulatedSwitched(_ sender: UISwitch)
+    {
+        if sender.isOn
+        {
+            debug = true
+        }
+        else
+        {
+            debug = false
+        }
+        
+        listOfPeripherals = []
+        listOfPeripheralsCopy = []
+        availableScoreboardsTableView.reloadData()
+    }
+    
     /*==========================================================================================*/
     //
     //  Recieved after confirmation of bluetooth powered on ---- ALWAYS WAIT FOR THIS BEFORE SCANNING
@@ -224,7 +242,14 @@ extension AvailableScoreboardsViewController: UITableViewDataSource
     func tableView(_ tableView: UITableView,numberOfRowsInSection section: Int) -> Int
     {
         print("Number of peripherals \(listOfPeripherals.count)")
-        return listOfPeripherals.count
+        var count = 0
+        if !debug{
+            count = listOfPeripherals.count
+        }
+        else{
+            count = 1
+        }
+        return count
     }
     /*==========================================================================================*/
     //
@@ -235,7 +260,13 @@ extension AvailableScoreboardsViewController: UITableViewDataSource
     {
         print("cellForRowAtIndex")
         let cell = UITableViewCell()
-        let peripheralData: AnyObject = listOfPeripherals[indexPath.row]
+        var peripheralData: AnyObject?
+        
+        if !debug
+        {
+            peripheralData = listOfPeripherals[indexPath.row]
+        }
+        
         var cellData = ""
         var numberOfLinesNeeded = 2
         
@@ -248,17 +279,25 @@ extension AvailableScoreboardsViewController: UITableViewDataSource
         cell.layer.borderColor = UIColor(red: 60/255, green: 133/255, blue: 59/255, alpha: 1).cgColor
         
         // Pull Local Name From Peripheral
-        if let localName = peripheralData["localName"] as! String!{
-            numberOfLinesNeeded += 1
-            cellData = cellData + "\(localName)"
+        if !debug
+        {
+            if let localName = peripheralData?["localName"] as! String!{
+                numberOfLinesNeeded += 1
+                cellData = cellData + "\(localName)"
+                
+            }
             
+            if let rssi = peripheralData?["RSSI"] as! NSInteger!{
+                numberOfLinesNeeded += 1
+                cellData = cellData + "\rRSSI: [\(rssi)]"
+            }
         }
         
-        if let rssi = peripheralData["RSSI"] as! NSInteger!{
-            numberOfLinesNeeded += 1
-            cellData = cellData + "\rRSSI: [\(rssi)]"
+        if debug
+        {
+            cellData = "Simulated Scoreboard"
         }
-        
+
         cell.textLabel?.numberOfLines = numberOfLinesNeeded
         cell.textLabel?.text = cellData
         return cell
