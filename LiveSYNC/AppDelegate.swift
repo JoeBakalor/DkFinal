@@ -16,6 +16,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        //UINavigationBar.appearance().barTintColor = UIColor(red: 234.0/255.0, green: 46.0/255.0, blue: 73.0/255.0, alpha: 1.0)
+        //UINavigationBar.appearance().tintColor = UIColor(red: 55.0/255.0, green: 87.0/255.0, blue: 46.0/255.0, alpha: 1.0)
+        UINavigationBar.appearance().titleTextAttributes = [NSForegroundColorAttributeName : UIColor(red: 55.0/255.0, green: 87.0/255.0, blue: 46.0/255.0, alpha: 1.0)]
+        //UINavigationBar.appearance().titleTextAttributes = [NSFo]
         return true
     }
 
@@ -37,8 +41,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
     }
 
-    func applicationWillTerminate(_ application: UIApplication) {
+    func applicationWillTerminate(_ application: UIApplication)
+    {
         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
+        //EmulatedScoreboardViewController.blankScoreboard(EmulatedScoreboardViewController)
+        NotificationCenter.default.post(name: Notification.Name(rawValue: "applicationWillTerminateID"), object: self, userInfo: nil)
+        
     }
 
 

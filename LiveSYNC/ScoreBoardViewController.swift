@@ -9,8 +9,8 @@
 import UIKit
 import CoreBluetooth
 
-let SerialCharacteristicUUID = CBUUID(string: "569A2001-B87F-490C-92CB-11BA5EA5167C")
-let SerialServiceUUID = CBUUID(string: "569A1101-B87F-490C-92CB-11BA5EA5167C")
+//let SerialCharacteristicUUID = CBUUID(string: "569A2001-B87F-490C-92CB-11BA5EA5167C")
+//let SerialServiceUUID = CBUUID(string: "569A1101-B87F-490C-92CB-11BA5EA5167C")
 
 class ScoreBoardViewController: UIViewController {
 
@@ -27,9 +27,7 @@ class ScoreBoardViewController: UIViewController {
     @IBOutlet weak var homeScore: UILabel!
     @IBOutlet weak var setupStatusView: UIView! // Setup status window
     @IBOutlet weak var setupStatusIndicator: UIActivityIndicatorView!
-    
-    @IBOutlet weak var LiveSYNCLabel: UILabel!
-    
+    @IBOutlet weak var scoreBoardSubView: UIView!
     @IBOutlet weak var debugLabel: UILabel!
     /*==========================================================================================*/
     //
@@ -49,12 +47,13 @@ class ScoreBoardViewController: UIViewController {
     /*==========================================================================================*/
     override func viewDidLoad()
     {
+        scoreBoardSubView.layer.borderColor = UIColor.white.cgColor//(red: 215/255, green: 215/255, blue: 215/255, alpha: 1).cgColor
         debugLabel.layer.isHidden = true
         if UIDeviceOrientationIsLandscape(UIDevice.current.orientation)
         {
-            LiveSYNCLabel.layer.isHidden = true
+            //LiveSYNCLabel.layer.isHidden = true
         }else{
-            LiveSYNCLabel.layer.isHidden = false
+            //LiveSYNCLabel.layer.isHidden = false
         }
         //  Start animation to show that we are getting everything setup
         setupStatusIndicator.startAnimating()
@@ -76,9 +75,14 @@ class ScoreBoardViewController: UIViewController {
         // Detect rotation changes
         NotificationCenter.default.addObserver(self, selector: #selector(ScoreBoardViewController.rotated), name: NSNotification.Name.UIDeviceOrientationDidChange, object: nil)
         
-        //!!!!!!******COMMENTED OUT BECUASE OF WARNING, IF BREAKS CHANGE BACK NOVEMBER 23
-        //MultidropPacketBuilderSharedInstance//init the class instance so we can start using it
+        //  Add observer for when the connection to peripheral scorebaord fails, can be caused by connection timeout
+        //  NotificationCenter.default.addObserver(self, selector: #selector(AvailableScoreboardsViewController.connectionToPeripheralFailed(_:)), name: NSNotification.Name(rawValue: "connectionToPeripheralFailedID"), object: nil)
     }
+    /*==========================================================================================*/
+    //
+    //  Debug switch changed, hide or unhide debug string display
+    //
+    /*==========================================================================================*/
     @IBAction func debugSwitched(_ sender: UISwitch)
     {
         if sender.isOn
@@ -99,12 +103,12 @@ class ScoreBoardViewController: UIViewController {
     {
         if UIDeviceOrientationIsLandscape(UIDevice.current.orientation) {
             print("Landscape")
-            LiveSYNCLabel.layer.isHidden = true
+            //LiveSYNCLabel.layer.isHidden = true
         }
         
         if UIDeviceOrientationIsPortrait(UIDevice.current.orientation) {
             print("Portrait")
-            LiveSYNCLabel.layer.isHidden = false
+            //LiveSYNCLabel.layer.isHidden = false
         }
     }
     /*==========================================================================================*/
@@ -248,6 +252,15 @@ class ScoreBoardViewController: UIViewController {
     }
     /*==========================================================================================*/
     //
+    //  Called if the peripheral connection is terminated or fails, should let user know
+    //
+    /*==========================================================================================*/
+    func peripheralDisconnected()
+    {
+        
+    }
+    /*==========================================================================================*/
+    //
     //  Send updates to scoreboard
     //
     /*==========================================================================================*/
@@ -259,7 +272,7 @@ class ScoreBoardViewController: UIViewController {
             if !setupComplete{return}
         }
         // Create protocol packet to send
-        protocolStringToSend = MultidropPacketBuilderSharedInstance.convertValuesToProtocalString(ballCount.text!, strikes: strikeCount.text!, outs: outCount.text!, guestScore: guestScore.text!, inningCount: inningCount.text!, homeScore: homeScore.text!)
+        /*protocolStringToSend = MultidropPacketBuilderSharedInstance.convertValuesToProtocalString(ballCount.text!, strikes: strikeCount.text!, outs: outCount.text!, guestScore: guestScore.text!, inningCount: inningCount.text!, homeScore: homeScore.text!, currentTime: "0")
         print("Retuned Protocol String: \(protocolStringToSend)")
         
         debugLabel.text? = "\(protocolStringToSend!)"
@@ -268,7 +281,7 @@ class ScoreBoardViewController: UIViewController {
         if !debug
         {
         BLEConnectionManagerSharedInstance.bleService?.writeValueToCharacteristic(protocolStringToSend! as Data, characteristic: scoreboardCharacteristic!)
-        }
+        }*/
     }
     /*==========================================================================================*/
 

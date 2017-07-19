@@ -10,6 +10,8 @@ import UIKit
 import CoreBluetooth
 public var debug = false
 
+let defaults = UserDefaults.standard
+let savedGameDataInstance = GameData()
 
 class AvailableScoreboardsViewController: UIViewController
 {
@@ -23,6 +25,8 @@ class AvailableScoreboardsViewController: UIViewController
     @IBOutlet weak var connectionStatus: UIActivityIndicatorView!  // Spinning indicator
     @IBOutlet weak var connectingViewLabel: UILabel!
     @IBOutlet weak var simulatedSwitch: UISwitch!
+    @IBOutlet weak var baseballStatusIndicator: UIImageView!  //  baseball image to use for status animation
+    @IBOutlet weak var modelSelection: UISegmentedControl!
     /*==========================================================================================*/
     //
     // Constants
@@ -38,6 +42,8 @@ class AvailableScoreboardsViewController: UIViewController
     var duplicateFound: Bool = false
     var timer = Timer()
     var bluetoothReady: Bool = false
+    
+    
     /*==========================================================================================*/
     //
     // Do initial setup when view loads
@@ -45,14 +51,13 @@ class AvailableScoreboardsViewController: UIViewController
     /*==========================================================================================*/
     override func viewDidLoad()
     {
-        //super.viewDidLoad()
         availableScoreboardsTableView.layer.cornerRadius = 10
-        
         //  Should use an initializer instead
         BLEConnectionManagerSharedInstance //this has to be called to recieve notification that bluetoothState powered on
-        
         //  MAY NEED TO (SHOULD) REMOVE OBSERVERS BEFORE LEAVING VIEW OTHERWISE THERE MAY BE ERRORS
         //  Add observer for when scoreboards are found
+        modelSelection.layer.isHidden = true
+        
         NotificationCenter.default.addObserver(self, selector: #selector(AvailableScoreboardsViewController.foundScoreboardPeripheral(_:)), name: NSNotification.Name(rawValue: "foundPeripheralID"), object: nil)
         //  Add observer for when connection to scoreboard succeeds
         NotificationCenter.default.addObserver(self, selector: #selector(AvailableScoreboardsViewController.connectionToPeripheralSuccessful(_:)), name: NSNotification.Name(rawValue: "connectedToPeripheralID"), object: nil)
@@ -65,34 +70,24 @@ class AvailableScoreboardsViewController: UIViewController
         connectionStatus.stopAnimating()
         connectionStatus.isHidden = true
     }
-    
+    /*==========================================================================================*/
+    //
+    //  make necessary changes when user turn the "Simulated" switch on or off
+    //
+    /*==========================================================================================*/
     @IBAction func simulatedSwitched(_ sender: UISwitch)
     {
-        if sender.isOn
-        {
+        if sender.isOn{
+            
             debug = true
-        }
-        else
-        {
+            
+        }else{
+            
             debug = false
         }
         
-        listOfPeripherals = []
-        listOfPeripheralsCopy = []
-        availableScoreboardsTableView.reloadData()
-    }
-    
-    /*==========================================================================================*/
-    //
-    //  Recieved after confirmation of bluetooth powered on ---- ALWAYS WAIT FOR THIS BEFORE SCANNING
-    //
-    /*==========================================================================================*/
-    func bluetoothStatePoweredOn(_ notification: Notification)
-    {
-        // Start looking for Scoreboards with UUID defined as constant
-        bluetoothReady = true
-        print("Received notification that bluetooth is now powered on, started scanning ")
-        BLEConnectionManagerSharedInstance.startScanning([SerialServiceUUID])
+        //  reload table data
+        listOfPeripherals = []; listOfPeripheralsCopy = []; availableScoreboardsTableView.reloadData()
     }
     /*==========================================================================================*/
     //
@@ -101,13 +96,10 @@ class AvailableScoreboardsViewController: UIViewController
     /*==========================================================================================*/
     override func viewDidAppear(_ animated: Bool)
     {
-        listOfPeripherals = []
-        listOfPeripheralsCopy = []
-        availableScoreboardsTableView.reloadData()
-        
-        if bluetoothReady{
-            BLEConnectionManagerSharedInstance.startScanning([SerialServiceUUID])
-        }
+        listOfPeripherals = []; listOfPeripheralsCopy = []; availableScoreboardsTableView.reloadData()
+        //  if bluetooth radio is ready, start scanning otherwise scanning will be started when 
+        //  bluetoothStatePoweredOn() is called
+        if bluetoothReady{BLEConnectionManagerSharedInstance.startScanning([SerialServiceUUID])}
     }
     /*==========================================================================================*/
     //
@@ -129,6 +121,18 @@ class AvailableScoreboardsViewController: UIViewController
     }
     /*==========================================================================================*/
     //
+    //  Recieved after confirmation of bluetooth powered on ---- ALWAYS WAIT FOR THIS BEFORE SCANNING
+    //
+    /*==========================================================================================*/
+    func bluetoothStatePoweredOn(_ notification: Notification)
+    {
+        // Start looking for Scoreboards with UUID defined as constant
+        bluetoothReady = true
+        //print("Received notification that bluetooth is now powered on, started scanning")
+        BLEConnectionManagerSharedInstance.startScanning([SerialServiceUUID])
+    }
+    /*==========================================================================================*/
+    //
     //  Handle data from new peripheral found and post to table
     //
     /*==========================================================================================*/
@@ -142,29 +146,32 @@ class AvailableScoreboardsViewController: UIViewController
         let newPeripheral = userInfo["peripheralFound"] as! CBPeripheral!
         
         //rebuild listOfPeripherals check for and removing/replacing duplicate entries.  Updated info always used
-        for entry in listOfPeripherals
-        {
+        for entry in listOfPeripherals{
+            
             let oldPeripheral = entry["peripheralFound"] as! CBPeripheral!
             
             if newPeripheral == oldPeripheral{
+                
                 duplicateFound = true
                 listOfPeripheralsCopy.append(userInfo as AnyObject)
+                
             }else{
+                
                 //duplicateFound = false
                 listOfPeripheralsCopy.append(entry)
             }
-            print("listOfPeripheralsCopy: \(listOfPeripheralsCopy)")
+            //print("listOfPeripheralsCopy: \(listOfPeripheralsCopy)")
         }
         listOfPeripherals = listOfPeripheralsCopy
         
         //didnt find a duplicate so we just made a copy of the existing list above, so add the new peripheral to the list
         if !duplicateFound{
+            
             listOfPeripherals.append(userInfo as AnyObject)
         }
         
         //clear copy
-        listOfPeripheralsCopy = []
-        self.availableScoreboardsTableView.reloadData()
+        listOfPeripheralsCopy = []; self.availableScoreboardsTableView.reloadData()
     }
     /*==========================================================================================*/
     //
@@ -181,8 +188,19 @@ class AvailableScoreboardsViewController: UIViewController
         
         print("Connected to Scoreboard!!")
         
-        let newView = self.storyboard?.instantiateViewController(withIdentifier: "ScoreBoardViewController") as! ScoreBoardViewController!
+        switch modelSelection.selectedSegmentIndex
+        {
+        case 0: print("BA-2518 is selected")
+        let newView = self.storyboard?.instantiateViewController(withIdentifier: "EmulatedScoreboardViewController") as! EmulatedScoreboardViewController!
         self.navigationController?.show(newView!, sender: self)
+        case 1: print("BA-2715 is selected")
+        let newView = self.storyboard?.instantiateViewController(withIdentifier: "EmulatedScoreboardAlternateViewController") as! EmulatedScoreBoardAlternateViewController!
+        self.navigationController?.show(newView!, sender: self)
+        default: print("none selected")
+        }
+        
+        //let newView = self.storyboard?.instantiateViewController(withIdentifier: "EmulatedScoreboardViewController") as! EmulatedScoreboardViewController!
+        //self.navigationController?.show(newView!, sender: self)
     }
     /*==========================================================================================*/
     //
@@ -226,8 +244,19 @@ class AvailableScoreboardsViewController: UIViewController
         // Clear connectionView status window and stop indicator animation
         connectingView.layer.isHidden = true; connectionStatus.isHidden = true; connectionStatus.stopAnimating()
         
-        let newView = self.storyboard?.instantiateViewController(withIdentifier: "ScoreBoardViewController") as! ScoreBoardViewController!
+        switch modelSelection.selectedSegmentIndex
+        {
+        case 0: print("BA-2518 is selected")
+        let newView = self.storyboard?.instantiateViewController(withIdentifier: "EmulatedScoreboardViewController") as! EmulatedScoreboardViewController!
         self.navigationController?.show(newView!, sender: self)
+        case 1: print("BA-2715 is selected")
+        let newView = self.storyboard?.instantiateViewController(withIdentifier: "EmulatedScoreboardAlternateViewController") as! EmulatedScoreBoardAlternateViewController!
+        self.navigationController?.show(newView!, sender: self)
+        default: print("none selected")
+        }
+        
+        //let newView = self.storyboard?.instantiateViewController(withIdentifier: "EmulatedScoreboardViewController") as! EmulatedScoreboardViewController!
+        //self.navigationController?.show(newView!, sender: self)
     }
     /*==========================================================================================*/
 }
@@ -241,14 +270,14 @@ extension AvailableScoreboardsViewController: UITableViewDataSource
     /*==========================================================================================*/
     func tableView(_ tableView: UITableView,numberOfRowsInSection section: Int) -> Int
     {
-        print("Number of peripherals \(listOfPeripherals.count)")
+        //print("Number of peripherals \(listOfPeripherals.count)")
         var count = 0
-        if !debug{
-            count = listOfPeripherals.count
-        }
-        else{
-            count = 1
-        }
+        
+        if !debug
+        {count = listOfPeripherals.count}
+        else
+        {count = 1}
+        
         return count
     }
     /*==========================================================================================*/
@@ -258,14 +287,11 @@ extension AvailableScoreboardsViewController: UITableViewDataSource
     /*==========================================================================================*/
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
     {
-        print("cellForRowAtIndex")
+        //print("cellForRowAtIndex")
         let cell = UITableViewCell()
         var peripheralData: AnyObject?
         
-        if !debug
-        {
-            peripheralData = listOfPeripherals[indexPath.row]
-        }
+        if !debug {peripheralData = listOfPeripherals[indexPath.row]}
         
         var cellData = ""
         var numberOfLinesNeeded = 2
@@ -281,22 +307,21 @@ extension AvailableScoreboardsViewController: UITableViewDataSource
         // Pull Local Name From Peripheral
         if !debug
         {
-            if let localName = peripheralData?["localName"] as! String!{
+            if let localName = peripheralData?["localName"] as! String!
+            {
                 numberOfLinesNeeded += 1
                 cellData = cellData + "\(localName)"
                 
             }
             
-            if let rssi = peripheralData?["RSSI"] as! NSInteger!{
+            if let rssi = peripheralData?["RSSI"] as! NSInteger!
+            {
                 numberOfLinesNeeded += 1
                 cellData = cellData + "\rRSSI: [\(rssi)]"
             }
         }
         
-        if debug
-        {
-            cellData = "Simulated Scoreboard"
-        }
+        if debug {cellData = "Simulated Scoreboard"}
 
         cell.textLabel?.numberOfLines = numberOfLinesNeeded
         cell.textLabel?.text = cellData
@@ -328,15 +353,18 @@ extension AvailableScoreboardsViewController: UITableViewDelegate
     {
         //  Indicate to user that connection attempt is in progress
         connectingView.layer.isHidden = false; connectionStatus.isHidden = false; connectingViewLabel.text! = "Connecting"; connectionStatus.startAnimating()
+        baseballStatusIndicator.rotate360Degrees()
         
         //try to connect to peripheral
-        if debug == false{
+        if debug == false
+        {
             BLEConnectionManagerSharedInstance.stopScanning()
             BLEConnectionManagerSharedInstance.connectToPeripheral((listOfPeripherals[indexPath.row])["peripheralFound"] as! CBPeripheral!)
             //timer = Timer.scheduledTimer(timeInterval: 5, target: self, selector: #selector(AvailableScoreboardsViewController.connectionTimeout), userInfo: nil, repeats: false);
         }
-        else{
-            timer = Timer.scheduledTimer(timeInterval: 2, target: self, selector: #selector(AvailableScoreboardsViewController.simConnected), userInfo: nil, repeats: false)
+        else
+        {
+            timer = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(AvailableScoreboardsViewController.simConnected), userInfo: nil, repeats: false)
         }
     }
     /*==========================================================================================*/
